@@ -8,24 +8,47 @@ import sys
 import time
 import math
 
+import argparse
+
 import torch
 import torch.nn as nn
 import torch.nn.init as init
+import torchvision.transforms as transforms
+from dataset import TiffFolder
 
+def online_mean_and_sd(loader, nodata_value=-1):
+    """Compute the mean and sd in an online fashion
+        Var[x] = E[X^2] - E^2[X]
+    """
+    cnt = 0
+    fst_moment = None
+    snd_moment = None
 
-def get_mean_and_std(dataset):
-    '''Compute the mean and std value of dataset.'''
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=2)
-    mean = torch.zeros(3)
-    std = torch.zeros(3)
-    print('==> Computing mean and std..')
-    for inputs, targets in dataloader:
-        for i in range(3):
-            mean[i] += inputs[:,i,:,:].mean()
-            std[i] += inputs[:,i,:,:].std()
-    mean.div_(len(dataset))
-    std.div_(len(dataset))
-    return mean, std
+    for (data, _) in loader:
+        b, c, h, w = data.shape
+
+        if fst_moment is None:
+            fst_moment = torch.empty(c)
+        if snd_moment is None:
+            snd_moment = torch.empty(c)
+
+        nb_pixels       = b * h * w
+
+        sum_            = torch.empty(c)
+        sum_of_square   = torch.empty(c)
+        for i in range(c):
+            c_data      = data[:, i, ...]
+            c_data      = c_data[c_data > nodata_value]
+
+            sum_[i]     = torch.sum(c_data)
+            sum_of_square[i] = torch.sum(c_data ** 2)
+
+        fst_moment  = (cnt * fst_moment + sum_) / (cnt + nb_pixels)
+        snd_moment  = (cnt * snd_moment + sum_of_square) / (cnt + nb_pixels)
+
+        cnt         += nb_pixels
+
+    return fst_moment, torch.sqrt(snd_moment - fst_moment ** 2)
 
 def init_params(net):
     '''Init layer parameters.'''
@@ -41,56 +64,6 @@ def init_params(net):
             init.normal(m.weight, std=1e-3)
             if m.bias:
                 init.constant(m.bias, 0)
-
-
-_, term_width = os.popen('stty size', 'r').read().split()
-term_width = int(term_width)
-
-TOTAL_BAR_LENGTH = 86.
-last_time = time.time()
-begin_time = last_time
-def progress_bar(current, total, msg=None):
-    global last_time, begin_time
-    if current == 0:
-        begin_time = time.time()  # Reset for new bar.
-
-    cur_len = int(TOTAL_BAR_LENGTH*current/total)
-    rest_len = int(TOTAL_BAR_LENGTH - cur_len) - 1
-
-    sys.stdout.write(' [')
-    for i in range(cur_len):
-        sys.stdout.write('=')
-    sys.stdout.write('>')
-    for i in range(rest_len):
-        sys.stdout.write('.')
-    sys.stdout.write(']')
-
-    cur_time = time.time()
-    step_time = cur_time - last_time
-    last_time = cur_time
-    tot_time = cur_time - begin_time
-
-    L = []
-    L.append('  Step: %s' % format_time(step_time))
-    L.append(' | Tot: %s' % format_time(tot_time))
-    if msg:
-        L.append(' | ' + msg)
-
-    msg = ''.join(L)
-    sys.stdout.write(msg)
-    for i in range(term_width-int(TOTAL_BAR_LENGTH)-len(msg)-3):
-        sys.stdout.write(' ')
-
-    # Go back to the center of the bar.
-    for i in range(term_width-int(TOTAL_BAR_LENGTH/2)):
-        sys.stdout.write('\b')
-    sys.stdout.write(' %d/%d ' % (current+1, total))
-
-    if current < total-1:
-        sys.stdout.write('\r')
-    else:
-        sys.stdout.write('\n')
-    sys.stdout.flush()
 
 def format_time(seconds):
     days = int(seconds / 3600/24)
@@ -123,3 +96,16 @@ def format_time(seconds):
     if f == '':
         f = '0ms'
     return f
+
+
+if __name__ == '__main__':
+    parser  = argparse.ArgumentParser()
+    parser.add_argument('--dir', default="", type=str, help='')
+    args    = parser.parse_args()
+
+    ds          = TiffFolder(args.dir, transform=transforms.Compose([transforms.ToTensor(),]))
+
+    dataloader  = torch.utils.data.DataLoader(ds, batch_size=1, shuffle=False, num_workers=0)
+    mean, std   = online_mean_and_sd(dataloader)
+    print(mean)
+    print(std)

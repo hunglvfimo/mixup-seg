@@ -13,7 +13,7 @@ cfg = {
 }
 
 class HungNet(nn.Module):
-    def __init__(self, name, in_channels, n_classes):
+	def __init__(self, name, in_channels, n_classes):
 		super(HungNet, self).__init__()
 		self.features 	= self._make_layers(cfg[name], in_channels)
 		self.classifier = nn.Linear(512, n_classes)
@@ -26,11 +26,23 @@ class HungNet(nn.Module):
 		return out
 
 	def _make_layers(self, cfg, in_channels):
-	    layers = []
-	    for x in cfg:
-	    	layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1), nn.BatchNorm2d(x), nn.ReLU(inplace=True)]
-	    	in_channels = x
+		layers = []
+		for x in cfg:
+			layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1), nn.BatchNorm2d(x), nn.ReLU(inplace=True)]
+			in_channels = x
 		return nn.Sequential(*layers)
+
+def HungNet11(in_channels, n_classes):
+	return HungNet("11", in_channels, n_classes)
+
+def HungNet13(in_channels, n_classes):
+	return HungNet("13", in_channels, n_classes)
+
+def HungNet16(in_channels, n_classes):
+	return HungNet("16", in_channels, n_classes)
+
+def HungNet19(in_channels, n_classes):
+	return HungNet("19", in_channels, n_classes)
 
 if __name__ == '__main__':
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

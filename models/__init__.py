@@ -7,4 +7,4 @@ from .googlenet import *
 from .mobilenet import *
 # from .densenet_efficient_multi_gpu import DenseNet190
 from .densenet3 import DenseNet190
-from .hunglv import HungNet
+from .hungnet import *

@@ -17,21 +17,29 @@ import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
-from torchvision.datasets import ImageFolder
 
 import models
-from utils import progress_bar
+from dataset import TiffFolder
+from tqdm import tqdm
 
-DATASET_MEAN    = (0.4914, 0.4822, 0.4465)
-DATASET_STD     = (0.2023, 0.1994, 0.2010)
+DATASET_MEAN    = (1.4412e+03,  6.6771e+03,  6.8463e-02,  3.5090e-02,  2.1542e-02,
+         7.4142e-02,  9.7441e-02,  1.0294e-01,  1.0430e-01,  1.0020e-01,
+         1.0696e-01,  1.0025e-01,  9.6298e-02, -2.6017e-03, -6.0922e-03,
+        -7.2946e-02,  6.0688e-02,  2.2337e-02, -9.1976e-02,  1.5068e+00,
+        -1.6695e-02)
+
+DATASET_STD     = (1.7444e+03, 8.5088e+03, 9.5835e-03, 3.7184e-02, 2.5516e-02, 1.1907e-02,
+        1.6603e-02, 2.6543e-02, 1.4727e-02, 5.1238e-02, 6.2930e-02, 6.8506e-02,
+        7.5792e-02, 9.1515e-02, 1.6759e-01, 3.3372e-01, 1.8578e-01, 1.0341e-01,
+        3.6783e-01, 7.7687e-01, 1.8006e-01)
 
 parser = argparse.ArgumentParser(description='PyTorch Mixup')
 parser.add_argument('--train_dir', default="", type=str, help='')
 parser.add_argument('--test_dir', default="", type=str, help='')
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--snapshot', type=str, default=None)
-parser.add_argument('--model', default="ResNet18", type=str,
-                    help='model type (default: ResNet18)')
+parser.add_argument('--model', default="HungNet11", type=str,
+                    help='model type (default: HungNet11)')
 parser.add_argument('--name', default='0', type=str, help='name of run')
 parser.add_argument('--seed', default=0, type=int, help='random seed')
 parser.add_argument('--batch-size', default=128, type=int, help='batch size')
@@ -57,37 +65,21 @@ if args.seed != 0:
 
 # Data
 print('==> Preparing data..')
-if args.augment:
-    transform_train = transforms.Compose([
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomVerticalFlip(),
-        transforms.Normalize(DATASET_MEAN,
-                             DATASET_STD),
-        transforms.ToTensor(),
-    ])
-else:
-    transform_train = transforms.Compose([
-        transforms.Normalize(DATASET_MEAN,
-                             DATASET_STD),
-        transforms.ToTensor(),
-    ])
 
-
-transform_test = transforms.Compose([
-    transforms.Normalize(DATASET_MEAN,
-                        DATASET_STD),
+transform       = transforms.Compose([
     transforms.ToTensor(),
+    transforms.Normalize(DATASET_MEAN,
+                         DATASET_STD),
 ])
 
-trainset = datasets.ImageFolder(args.train_dir, transform=transform_train)
+trainset    = TiffFolder(args.train_dir, transform=transform)
 trainloader = torch.utils.data.DataLoader(trainset,
                                           batch_size=args.batch_size,
                                           shuffle=True, num_workers=args.num_workers)
 
-testset = datasets.ImageFolder(args.test_dir, transform=transform_test)
-testloader = torch.utils.data.DataLoader(testset, batch_size=args.batch_size,
+testset     = TiffFolder(args.test_dir, transform=transform)
+testloader  = torch.utils.data.DataLoader(testset, batch_size=args.batch_size,
                                          shuffle=False, num_workers=args.num_workers)
-
 
 # Model
 if args.snapshot is not None:
@@ -95,7 +87,7 @@ if args.snapshot is not None:
     pass
 else:
     print('==> Building model..')
-    net = models.__dict__[args.model]()
+    net = models.__dict__[args.model](21, 9)
 
 if not os.path.isdir('results'):
     os.mkdir('results')
@@ -104,14 +96,10 @@ logname = ('results/log_' + net.__class__.__name__ + '_' + args.name + '_'
 
 if use_cuda:
     net.cuda()
-    # net = torch.nn.DataParallel(net)
-    # print(torch.cuda.device_count())
-    # cudnn.benchmark = True
     print('Using CUDA..')
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.decay)
-
 
 def mixup_data(x, y, alpha=1.0, use_cuda=True):
     '''Returns mixed inputs, pairs of targets, and lambda'''
@@ -142,7 +130,9 @@ def train(epoch):
     reg_loss    = 0
     correct     = 0
     total       = 0
-    for batch_idx, (inputs, targets) in enumerate(trainloader):
+
+    pbar        = tqdm(trainloader)
+    for batch_idx, (inputs, targets) in enumerate(pbar):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
 
@@ -160,20 +150,21 @@ def train(epoch):
         loss.backward()
         optimizer.step()
 
-        progress_bar(batch_idx, len(trainloader),
-                     'Loss: %.3f | Reg: %.5f | Acc: %.3f%% (%d/%d)'
-                     % (train_loss / (batch_idx + 1), reg_loss / (batch_idx + 1),
-                        100.* correct/total, correct, total))
+        pbar.set_description('Loss: %.3f | Reg: %.5f | Acc: %.3f%% (%d/%d)'
+                            % (train_loss / (batch_idx + 1), reg_loss / (batch_idx + 1),
+                                100.* correct/total, correct, total))
     return (train_loss / batch_idx, reg_loss / batch_idx, 100.* correct/total)
 
 
 def test(epoch):
     global best_acc
     net.eval()
-    test_loss = 0
-    correct = 0
-    total = 0
-    for batch_idx, (inputs, targets) in enumerate(testloader):
+    test_loss   = 0
+    correct     = 0
+    total       = 0
+
+    pbar        = tqdm(testloader)
+    for batch_idx, (inputs, targets) in enumerate(pbar):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
         inputs, targets = Variable(inputs, volatile=True), Variable(targets)
@@ -185,10 +176,10 @@ def test(epoch):
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
 
-        progress_bar(batch_idx, len(testloader),
-                     'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+        pbar.set_description('Loss: %.3f | Acc: %.3f%% (%d/%d)'
                      % (test_loss/(batch_idx+1), 100.*correct/total,
                         correct, total))
+    
     acc = 100.*correct/total
     if epoch == start_epoch + args.epoch - 1 or acc > best_acc:
         checkpoint(acc, epoch)
