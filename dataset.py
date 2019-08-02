@@ -46,9 +46,7 @@ class TiffFolder(Dataset):
 
     def __getitem__(self, index):
         image = tiff.imread(self._image_paths[index])
-        
-        label = np.zeros(self._n_classes)
-        label[self._labels[index]] = 1
+        label = self._labels[index]
         
         return self._transform(image), torch.from_numpy(label).long()
 
