@@ -38,21 +38,17 @@ def plotloss(csvfile):
     ax2.set_ylabel('Accuracy', fontsize=16, color='black')
 
     # Plot valid/train losses
-    ax1.plot(epoch, tr_loss, linewidth=2,
-             ls='--', color='#c92508', label='Train loss')
-    ax1.plot(epoch, val_loss, linewidth=2,
-             ls='--', color='#2348ff', label='Val loss')
-    ax1.spines['left'].set_color('#f23d1d')
+    ax1.plot(epoch, tr_loss, linewidth=2, ls='--', color='#c92508', label='Train loss')
+    ax1.plot(epoch, val_loss, linewidth=2, color='#c92508', label='Val loss')
+    ax1.spines['left'].set_color('#c92508')
     # Coloring the ticks
     for label in ax1.get_yticklabels():
         label.set_color('#c92508')
         label.set_size(12)
 
     # Plot valid/trian accuracy
-    ax2.plot(epoch, tr_acc, linewidth=2,
-             color='#c92508', label='Train Acc')
-    ax2.plot(epoch, val_acc, linewidth=2,
-             color='#2348ff', label='Val Acc')
+    ax2.plot(epoch, tr_acc, linewidth=2, ls='--', color='#2348ff', label='Train Acc')
+    ax2.plot(epoch, val_acc, linewidth=2, color='#2348ff', label='Val Acc')
     ax2.spines['right'].set_color('#2348ff')
     # Coloring the ticks
     for label in ax2.get_yticklabels():

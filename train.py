@@ -91,7 +91,7 @@ else:
 if not os.path.isdir('results'):
     os.mkdir('results')
 logname = ('results/log_' + net.__class__.__name__ + '_' + args.name + '_'
-           + str(args.seed) + '.csv')
+           + str(args.seed) + '_' + str(int(args.mixup)) + '.csv')
 
 if use_cuda:
     net.cuda()
@@ -206,8 +206,8 @@ def checkpoint(acc, epoch):
     }
     if not os.path.isdir('checkpoint'):
         os.mkdir('checkpoint')
-    torch.save(state, './checkpoint/ckpt.t7' + args.name + '_'
-               + str(args.seed))
+    
+    torch.save(state, './checkpoint/ckpt.t7' + args.name + '_' + str(args.seed) + '_' + str(int(args.mixup)))
 
 def adjust_learning_rate(optimizer, epoch):
     """decrease the learning rate at 100 and 150 epoch"""
