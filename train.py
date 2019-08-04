@@ -147,13 +147,13 @@ def train(epoch):
         train_loss  += loss.item()
         
         _, predicted = torch.max(outputs.data, 1)
-        total       += targets.size(0).cpu()
+        total       += targets.size(0)
 
         if args.mixup:
-            correct     += (lam * predicted.eq(targets_a.data).cpu().sum().float()
-                                + (1 - lam) * predicted.eq(targets_b.data).cpu().sum().float())
+            correct     += (lam * predicted.eq(targets_a.data).cpu().sum().numpy()
+                                + (1 - lam) * predicted.eq(targets_b.data).cpu().sum().numpy())
         else:
-            correct     += predicted.eq(targets.data).cpu().sum()
+            correct     += predicted.eq(targets.data).cpu().sum().numpy()
 
         optimizer.zero_grad()
         loss.backward()
@@ -182,8 +182,8 @@ def test(epoch):
             test_loss       += loss.item()
             
             _, predicted    = torch.max(outputs.data, 1)
-            total           += targets.size(0).cpu()
-            correct         += predicted.eq(targets.data).cpu().sum()
+            total           += targets.size(0)
+            correct         += predicted.eq(targets.data).cpu().sum().numpy()
     
     acc = 100.* correct / total
     if epoch == start_epoch + args.epoch - 1 or acc > best_acc:
@@ -220,7 +220,7 @@ def adjust_learning_rate(optimizer, epoch):
         param_group['lr'] = lr
 
 if not os.path.exists(logname):
-    with open(logname, 'w') as logfile:
+    with open(logname, 'w', newline='') as logfile:
         logwriter = csv.writer(logfile, delimiter=',')
         logwriter.writerow(['epoch', 'train loss', 'train acc', 'test loss', 'test acc'])
 
@@ -228,6 +228,6 @@ for epoch in range(start_epoch, args.epoch):
     train_loss, train_acc   = train(epoch)
     test_loss, test_acc     = test(epoch)
     adjust_learning_rate(optimizer, epoch)
-    with open(logname, 'a') as logfile:
+    with open(logname, 'a', newline='') as logfile:
         logwriter = csv.writer(logfile, delimiter=',')
         logwriter.writerow([epoch, train_loss, train_acc, test_loss, test_acc])
