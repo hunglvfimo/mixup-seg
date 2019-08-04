@@ -36,7 +36,7 @@ DATASET_STD     = (1.7253e+03, 8.8444e+03, 1.1058e-02, 3.6809e-02, 2.5553e-02, 1
 parser = argparse.ArgumentParser(description='PyTorch Mixup')
 parser.add_argument('--train_dir', default="", type=str, help='')
 parser.add_argument('--test_dir', default="", type=str, help='')
-parser.add_argument('--mixup', dest='Use mixup', action='store_false')
+parser.add_argument('--mixup', dest='Use mixup (Default: False)', action='store_true')
 parser.add_argument('--lr', default=1e-1, type=float, help='learning rate')
 parser.add_argument('--snapshot', type=str, default=None)
 parser.add_argument('--model', default="HungNet11", type=str,
@@ -96,6 +96,9 @@ logname = ('results/log_' + net.__class__.__name__ + '_' + args.name + '_'
 if use_cuda:
     net.cuda()
     print('Using CUDA..')
+
+if args.mixup:
+    print('Using mixup')
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.decay)
