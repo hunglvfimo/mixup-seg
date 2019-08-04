@@ -36,6 +36,7 @@ DATASET_STD     = (1.7253e+03, 8.8444e+03, 1.1058e-02, 3.6809e-02, 2.5553e-02, 1
 parser = argparse.ArgumentParser(description='PyTorch Mixup')
 parser.add_argument('--train_dir', default="", type=str, help='')
 parser.add_argument('--test_dir', default="", type=str, help='')
+parser.add_argument('--mixup', dest='Use mixup', action='store_false')
 parser.add_argument('--lr', default=1e-1, type=float, help='learning rate')
 parser.add_argument('--snapshot', type=str, default=None)
 parser.add_argument('--model', default="HungNet11", type=str,
@@ -45,19 +46,17 @@ parser.add_argument('--seed', default=0, type=int, help='random seed')
 parser.add_argument('--batch-size', default=128, type=int, help='batch size')
 parser.add_argument('--epoch', default=200, type=int,
                     help='total epochs to run')
-parser.add_argument('--no-augment', dest='augment', action='store_false',
-                    help='use standard augmentation (default: True)')
 parser.add_argument('--decay', default=1e-4, type=float, help='weight decay')
 parser.add_argument('--alpha', default=1., type=float,
                     help='mixup interpolation coefficient (default: 1)')
 parser.add_argument('--num_workers', default=0, type=int,
                     help='')
 
-args = parser.parse_args()
+args        = parser.parse_args()
 
-use_cuda = torch.cuda.is_available()
+use_cuda    = torch.cuda.is_available()
 
-best_acc = 0  # best test accuracy
+best_acc    = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
 if args.seed != 0:
@@ -125,7 +124,6 @@ def train(epoch):
     print('\nEpoch: %d' % epoch)
     net.train()
     train_loss  = 0
-    reg_loss    = 0
     correct     = 0
     total       = 0
 
@@ -134,27 +132,32 @@ def train(epoch):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
 
-        inputs, targets_a, targets_b, lam   = mixup_data(inputs, targets, args.alpha, use_cuda)
-        inputs, targets_a, targets_b        = map(Variable, (inputs, targets_a, targets_b))
-        
+        if args.mixup:
+            inputs, targets_a, targets_b, lam   = mixup_data(inputs, targets, args.alpha, use_cuda)
+            inputs, targets_a, targets_b        = map(Variable, (inputs, targets_a, targets_b))
         outputs     = net(inputs)
         
-        loss        = mixup_criterion(criterion, outputs, targets_a, targets_b, lam)
+        if args.mixup:
+            loss        = mixup_criterion(criterion, outputs, targets_a, targets_b, lam)
+        else:
+            loss        = criterion(outputs, targets)
         train_loss  += loss.item()
         
         _, predicted = torch.max(outputs.data, 1)
         total       += targets.size(0)
 
-        correct     += (lam * predicted.eq(targets_a.data).cpu().sum().float()
-                            + (1 - lam) * predicted.eq(targets_b.data).cpu().sum().float())
+        if args.mixup:
+            correct     += (lam * predicted.eq(targets_a.data).cpu().sum().float()
+                                + (1 - lam) * predicted.eq(targets_b.data).cpu().sum().float())
+        else:
+            correct     += predicted.eq(targets.data).cpu().sum()
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
         pbar.set_description('Loss: %.3f' % loss.item())
-    return train_loss / batch_idx, 100.* correct/total
-
+    return train_loss / batch_idx, 100. * correct / total
 
 def test(epoch):
     global best_acc
@@ -170,27 +173,23 @@ def test(epoch):
                 inputs, targets = inputs.cuda(), targets.cuda()
             
             inputs, targets = Variable(inputs), Variable(targets)
-            
             outputs         = net(inputs)
-            
             loss            = criterion(outputs, targets)
 
-            test_loss += loss.item()
+            test_loss       += loss.item()
             
-            _, predicted = torch.max(outputs.data, 1)
-            total += targets.size(0)
-            correct += predicted.eq(targets.data).cpu().sum()
-
-            pbar.set_description('Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                         % (test_loss/(batch_idx+1), 100.*correct/total,
-                            correct, total))
+            _, predicted    = torch.max(outputs.data, 1)
+            total           += targets.size(0)
+            correct         += predicted.eq(targets.data).cpu().sum()
     
-    acc = 100.* correct/total
+    acc = 100.* correct / total
     if epoch == start_epoch + args.epoch - 1 or acc > best_acc:
         checkpoint(acc, epoch)
+    
     if acc > best_acc:
         best_acc = acc
-    return (test_loss/batch_idx, 100.*correct/total)
+    
+    return (test_loss / batch_idx, 100.* correct / total)
 
 
 def checkpoint(acc, epoch):
@@ -207,7 +206,6 @@ def checkpoint(acc, epoch):
     torch.save(state, './checkpoint/ckpt.t7' + args.name + '_'
                + str(args.seed))
 
-
 def adjust_learning_rate(optimizer, epoch):
     """decrease the learning rate at 100 and 150 epoch"""
     lr = args.lr
@@ -217,7 +215,6 @@ def adjust_learning_rate(optimizer, epoch):
         lr /= 10
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
-
 
 if not os.path.exists(logname):
     with open(logname, 'w') as logfile:
