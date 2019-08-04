@@ -144,7 +144,7 @@ def train(epoch):
         train_loss  += loss.item()
         
         _, predicted = torch.max(outputs.data, 1)
-        total       += targets.size(0)
+        total       += targets.size(0).cpu()
 
         if args.mixup:
             correct     += (lam * predicted.eq(targets_a.data).cpu().sum().float()
@@ -179,7 +179,7 @@ def test(epoch):
             test_loss       += loss.item()
             
             _, predicted    = torch.max(outputs.data, 1)
-            total           += targets.size(0)
+            total           += targets.size(0).cpu()
             correct         += predicted.eq(targets.data).cpu().sum()
     
     acc = 100.* correct / total
