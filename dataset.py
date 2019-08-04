@@ -30,13 +30,11 @@ class TiffFolder(Dataset):
 
         for index, label in enumerate(os.listdir(data_dir)):
             self._label_to_index[label]  = index
-            self._index_to_label[index]   = label
+            self._index_to_label[index]  = label
             
             for image_path in glob.glob(os.path.join(data_dir, label, "*.tif")):
                 self._image_paths.append(image_path)
                 self._labels.append(index)
-
-        self._n_classes      = len(list(self._label_to_index))
 
     def label_to_index(self, label):
         return self._label_to_index[label]
@@ -46,9 +44,11 @@ class TiffFolder(Dataset):
 
     def __getitem__(self, index):
         image = tiff.imread(self._image_paths[index])
-        label = self._labels[index]
         
-        return self._transform(image), torch.from_numpy(label).long()
+        return self._transform(image), self._labels[index]
 
     def __len__(self):
         return len(self._image_paths)
+
+if __name__ == '__main__':
+    pass
