@@ -24,7 +24,7 @@ def plotloss(csvfile):
 
     # Initiation
     epoch       = np.asarray(history.iloc[:, 0])
-    tr_acc      = np.asarray(history.iloc[:, 2])
+    # tr_acc      = np.asarray(history.iloc[:, 2])
     tr_loss     = np.asarray(history.iloc[:, 1])
     val_acc     = np.asarray(history.iloc[:, 4])
     val_loss    = np.asarray(history.iloc[:, 3])
@@ -47,7 +47,7 @@ def plotloss(csvfile):
         label.set_size(12)
 
     # Plot valid/trian accuracy
-    ax2.plot(epoch, tr_acc, linewidth=2, ls='--', color='#2348ff', label='Train Acc')
+    # ax2.plot(epoch, tr_acc, linewidth=2, ls='--', color='#2348ff', label='Train Acc')
     ax2.plot(epoch, val_acc, linewidth=2, color='#2348ff', label='Val Acc')
     ax2.spines['right'].set_color('#2348ff')
     # Coloring the ticks
