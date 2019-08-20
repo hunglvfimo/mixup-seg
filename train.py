@@ -19,26 +19,29 @@ import torch.optim as optim
 import torchvision.transforms as transforms
 
 import models
-from dataset import TiffFolder
-from tqdm import tqdm
-
-from sklearn.metrics import f1_score, confusion_matrix
+from dataset import TiffFolder, TiffImageSet
 from params import *
 
+from tqdm import tqdm
+from osgeo import gdal
+from sklearn.metrics import f1_score, confusion_matrix
+
 parser = argparse.ArgumentParser(description='PyTorch Mixup')
-parser.add_argument('--train_dir', default=None, type=str, help='')
-parser.add_argument('--test_dir', default=None, type=str, help='')
-parser.add_argument('--mixup', help='Use mixup (Default: False)', action='store_true')
-parser.add_argument('--lr', default=1e-1, type=float, help='learning rate')
-parser.add_argument('--snapshot', type=str, default=None)
-parser.add_argument('--model', default="HungNet11", type=str, help='model type (default: HungNet11)')
-parser.add_argument('--name', default='0', type=str, help='name of run')
-parser.add_argument('--seed', default=0, type=int, help='random seed')
-parser.add_argument('--batch-size', default=128, type=int, help='batch size')
-parser.add_argument('--epoch', default=1000, type=int, help='total epochs to run')
-parser.add_argument('--decay', default=1e-4, type=float, help='weight decay')
-parser.add_argument('--alpha', default=1., type=float, help='mixup interpolation coefficient (default: 1)')
-parser.add_argument('--num_workers', default=0, type=int, help='')
+parser.add_argument('--train_dir',      default=None, type=str, help='')
+parser.add_argument('--test_dir',       default=None, type=str, help='')
+parser.add_argument('--image_path',     type=str, default=None)
+parser.add_argument('--save_path',      type=str, default=None)
+parser.add_argument('--mixup',          help='Use mixup (Default: False)', action='store_true')
+parser.add_argument('--lr',             default=1e-1, type=float, help='learning rate')
+parser.add_argument('--snapshot',       type=str, default=None)
+parser.add_argument('--model',          default="HungNet11", type=str, help='model type (default: HungNet11)')
+parser.add_argument('--name',           default='0', type=str, help='name of run')
+parser.add_argument('--seed',           default=0, type=int, help='random seed')
+parser.add_argument('--batch-size',     default=128, type=int, help='batch size')
+parser.add_argument('--epoch',          default=1000, type=int, help='total epochs to run')
+parser.add_argument('--decay',          default=1e-4, type=float, help='weight decay')
+parser.add_argument('--alpha',          default=1., type=float, help='mixup interpolation coefficient (default: 1)')
+parser.add_argument('--num_workers',    default=0, type=int, help='')
 
 args        = parser.parse_args()
 
@@ -233,3 +236,34 @@ for epoch in range(start_epoch, args.epoch):
     with open(logname, 'a', newline='') as logfile:
         logwriter = csv.writer(logfile, delimiter=',')
         logwriter.writerow([epoch, train_loss, train_acc, test_loss, test_acc])
+
+
+ds          = TiffImageSet(args.image_path, transform=transform)
+loader      = torch.utils.data.DataLoader(ds,
+                                        batch_size=128,
+                                        shuffle=False, num_workers=0)
+results     = np.zeros(ds.get_shape(), dtype=np.uint8)
+pbar = tqdm(loader)
+net.eval()
+with torch.no_grad():
+    for (ys, xs, inputs) in pbar:
+        if use_cuda:
+            inputs  = inputs.cuda()
+
+        inputs      = Variable(inputs)
+        outputs     = net(inputs)
+        y_pred      = torch.argmax(outputs.data, 1).cpu().numpy()
+        for y, x, pred in zip(ys.numpy(), xs.numpy(), y_pred):
+            if y >= 0 and x >= 0:
+                results[y, x]   = pred + 1
+
+src_img     = gdal.Open(args.image_path)
+trans       = src_img.GetGeoTransform()
+proj        = src_img.GetProjection()
+
+outdriver   = gdal.GetDriverByName("GTiff")
+outdata     = outdriver.Create(os.path.join(args.save_path), results.shape[1], results.shape[0], 1, gdal.GDT_Byte)
+outdata.GetRasterBand(1).WriteArray(results)
+outdata.GetRasterBand(1).SetNoDataValue(0)
+outdata.SetGeoTransform(trans)
+outdata.SetProjection(proj)

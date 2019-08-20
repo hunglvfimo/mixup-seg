@@ -83,7 +83,7 @@ def predict():
 	proj 		= src_img.GetProjection()
 
 	outdriver	= gdal.GetDriverByName("GTiff")
-	outdata   	= outdriver.Create(os.path.join(args.save_dir, "pred.tif"), results.shape[1], results.shape[0], 1, gdal.GDT_Byte)
+	outdata   	= outdriver.Create(os.path.join(args.save_dir), results.shape[1], results.shape[0], 1, gdal.GDT_Byte)
 	outdata.GetRasterBand(1).WriteArray(results)
 	outdata.GetRasterBand(1).SetNoDataValue(0)
 	outdata.SetGeoTransform(trans)

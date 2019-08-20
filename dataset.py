@@ -70,13 +70,23 @@ class TiffImageSet(Dataset):
 
     def __getitem__(self, index):
         y, x        = index // self.image.shape[1], index % self.image.shape[1]
-        if y - self.patch_size >= 0 and y + self.patch_size  < self.image.shape[0] \
-            and x - self.patch_size >= 0 and x + self.patch_size < self.image.shape[1]:
-            img_patch   = self.image[y - self.patch_size: y + self.patch_size + 1, x - self.patch_size: x + self.patch_size + 1, :]
-            return y, x, self._transform(img_patch)
+
+        if x >= self.patch_size and y >= self.patch_size and x < self.image.shape[1] - self.patch_size and y < self.image.shape[0] - self.patch_size:
+            left_x      = x - self.patch_size
+            right_x     = x + self.patch_size + 1
+
+            bot_y       = y - self.patch_size
+            top_y       = y + self.patch_size + 1
+            
+            patch       = self.image[bot_y: top_y, left_x: right_x, :]
+            indices_y, indices_x, indices_c = np.where(patch < NODATA_VALUE)
+            for id_y, id_x, id_c in zip(indices_y, indices_x, indices_c):
+                image[id_y, id_x, id_c] = DATASET_MEAN[c]
+            
+            return y, x, self._transform(patch)
         else:
-            img_patch   = np.zeros((2 * self.patch_size + 1, 2 * self.patch_size + 1, self.image.shape[2]), dtype=np.float32)
-            return -1, -1, self._transform(img_patch)
+            patch   = np.zeros((2 * self.patch_size + 1, 2 * self.patch_size + 1, self.image.shape[2]), dtype=np.float32)
+            return -1, -1, self._transform(patch)
 
     def __len__(self):
         return self.image.shape[0] * self.image.shape[1]
