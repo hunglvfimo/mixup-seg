@@ -30,7 +30,10 @@ class TiffFolder(Dataset):
         self._label_to_index = dict()
         self._index_to_label = dict()
 
-        for index, label in enumerate(os.listdir(data_dir)):
+        lst_label            = os.listdir(data_dir)
+        lst_label            = np.sort(lst_label)
+
+        for index, label in enumerate(lst_label):
             self._label_to_index[label]  = index
             self._index_to_label[index]  = label
             

@@ -126,8 +126,8 @@ def train(epoch):
     correct     = 0
     total       = 0
 
-    pbar        = tqdm(trainloader)
-    for batch_idx, (inputs, targets) in enumerate(pbar):
+    # pbar        = tqdm(trainloader)
+    for batch_idx, (inputs, targets) in enumerate(trainloader):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
 
@@ -155,7 +155,7 @@ def train(epoch):
         loss.backward()
         optimizer.step()
 
-        pbar.set_description('Loss: %.3f' % loss.item())
+        # pbar.set_description('Loss: %.3f' % loss.item())
     return train_loss / batch_idx, 100. * correct / total
 
 def test(epoch):
@@ -228,6 +228,7 @@ for epoch in range(start_epoch, args.epoch):
         test_loss, test_acc     = test(epoch)
     else:
         test_loss, test_acc     = 0.0, 0.0
+    print("Epoch %d, Train loss: %.3f, Test loss: %.3f, Test Acc: %.3f" % (epoch, train_loss, test_loss, test_acc))
 
     adjust_learning_rate(optimizer, epoch)
     
