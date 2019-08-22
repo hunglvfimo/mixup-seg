@@ -46,6 +46,10 @@ class TiffFolder(Dataset):
 
     def __getitem__(self, index):
         image = tiff.imread(self._image_paths[index])
+        # replace no_value with mean
+        h, w, c = image.shape
+        for i in range(c):
+            image[..., i][image[..., i] == NODATA_VALUE] = DATASET_MEAN[i]
         
         return self._transform(image), self._labels[index]
 

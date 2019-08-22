@@ -104,7 +104,6 @@ if __name__ == '__main__':
     args    = parser.parse_args()
 
     ds          = TiffFolder(args.dir, transform=transforms.Compose([transforms.ToTensor(),]))
-
     dataloader  = torch.utils.data.DataLoader(ds, batch_size=1, shuffle=False, num_workers=0)
     mean, std   = online_mean_and_sd(dataloader)
     print(mean)
