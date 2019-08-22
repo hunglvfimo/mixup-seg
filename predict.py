@@ -18,6 +18,7 @@ from osgeo import gdal
 
 import models
 from dataset import TiffImageSet
+from params import *
 
 from tqdm import tqdm
 
