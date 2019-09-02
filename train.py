@@ -19,38 +19,27 @@ import torch.optim as optim
 import torchvision.transforms as transforms
 
 import models
-from dataset import TiffFolder
+from dataset import TiffFolder, TiffImageSet
+from params import *
+
 from tqdm import tqdm
-
-DATASET_MEAN    = (1.4113e+03,  6.4466e+03,  6.8021e-02,  3.4658e-02,  2.1277e-02,
-         7.3897e-02,  9.7023e-02,  1.0258e-01,  1.0396e-01,  9.9798e-02,
-         1.0648e-01,  1.0012e-01,  9.5947e-02, -2.4567e-03, -5.7526e-03,
-        -7.0414e-02,  5.9038e-02,  2.2282e-02, -8.9304e-02,  1.4858e+00,
-        -1.6102e-02)
-
-DATASET_STD     = (1.7253e+03, 8.8444e+03, 1.1058e-02, 3.6809e-02, 2.5553e-02, 1.3737e-02,
-        1.8679e-02, 2.8324e-02, 1.7626e-02, 5.1439e-02, 6.2850e-02, 6.8435e-02,
-        7.5585e-02, 9.0535e-02, 1.6582e-01, 3.3082e-01, 1.8185e-01, 1.0235e-01,
-        3.6490e-01, 7.7676e-01, 1.7835e-01)
+from osgeo import gdal
+from sklearn.metrics import f1_score, confusion_matrix
 
 parser = argparse.ArgumentParser(description='PyTorch Mixup')
-parser.add_argument('--train_dir', default="", type=str, help='')
-parser.add_argument('--test_dir', default="", type=str, help='')
-parser.add_argument('--mixup', help='Use mixup (Default: False)', action='store_true')
-parser.add_argument('--lr', default=1e-1, type=float, help='learning rate')
-parser.add_argument('--snapshot', type=str, default=None)
-parser.add_argument('--model', default="HungNet11", type=str,
-                    help='model type (default: HungNet11)')
-parser.add_argument('--name', default='0', type=str, help='name of run')
-parser.add_argument('--seed', default=0, type=int, help='random seed')
-parser.add_argument('--batch-size', default=128, type=int, help='batch size')
-parser.add_argument('--epoch', default=200, type=int,
-                    help='total epochs to run')
-parser.add_argument('--decay', default=1e-4, type=float, help='weight decay')
-parser.add_argument('--alpha', default=1., type=float,
-                    help='mixup interpolation coefficient (default: 1)')
-parser.add_argument('--num_workers', default=0, type=int,
-                    help='')
+parser.add_argument('--train_dir',      default=None, type=str, help='')
+parser.add_argument('--test_dir',       default=None, type=str, help='')
+parser.add_argument('--mixup',          help='Use mixup (Default: False)', action='store_true')
+parser.add_argument('--lr',             default=1e-1, type=float, help='learning rate')
+parser.add_argument('--snapshot',       type=str, default=None)
+parser.add_argument('--model',          default="HungNet11", type=str, help='model type (default: HungNet11)')
+parser.add_argument('--name',           default='0', type=str, help='name of run')
+parser.add_argument('--seed',           default=0, type=int, help='random seed')
+parser.add_argument('--batch-size',     default=128, type=int, help='batch size')
+parser.add_argument('--epoch',          default=1000, type=int, help='total epochs to run')
+parser.add_argument('--decay',          default=1e-4, type=float, help='weight decay')
+parser.add_argument('--alpha',          default=1., type=float, help='mixup interpolation coefficient (default: 1)')
+parser.add_argument('--num_workers',    default=0, type=int, help='')
 
 args        = parser.parse_args()
 
@@ -72,26 +61,33 @@ transform       = transforms.Compose([
 ])
 
 trainset    = TiffFolder(args.train_dir, transform=transform)
+print(trainset._index_to_label)
+
 trainloader = torch.utils.data.DataLoader(trainset,
                                           batch_size=args.batch_size,
                                           shuffle=True, num_workers=args.num_workers)
 
-testset     = TiffFolder(args.test_dir, transform=transform)
-testloader  = torch.utils.data.DataLoader(testset, batch_size=args.batch_size,
-                                         shuffle=False, num_workers=args.num_workers)
+if args.test_dir is not None:
+    testset     = TiffFolder(args.test_dir, transform=transform)
+    print(testset._index_to_label)
+    testloader  = torch.utils.data.DataLoader(testset, batch_size=args.batch_size,
+                                             shuffle=False, num_workers=args.num_workers)
 
 # Model
 if args.snapshot is not None:
-    # Load checkpoint.
-    pass
+    checkpoint = torch.load('./checkpoint/ckpt.t7' + args.name + '_' + str(int(args.mixup)))
+    net = checkpoint['net']
+    best_acc = checkpoint['acc']
+    start_epoch = checkpoint['epoch'] + 1
+    rng_state = checkpoint['rng_state']
+    torch.set_rng_state(rng_state)
 else:
     print('==> Building model..')
     net = models.__dict__[args.model](21, 9)
 
 if not os.path.isdir('results'):
     os.mkdir('results')
-logname = ('results/log_' + net.__class__.__name__ + '_' + args.name + '_'
-           + str(args.seed) + '_' + str(int(args.mixup)) + '.csv')
+logname = ('results/log_' + net.__class__.__name__ + '_' + str(args.name) + '_' + str(int(args.mixup)) + '.csv')
 
 if use_cuda:
     net.cuda()
@@ -131,8 +127,8 @@ def train(epoch):
     correct     = 0
     total       = 0
 
-    pbar        = tqdm(trainloader)
-    for batch_idx, (inputs, targets) in enumerate(pbar):
+    # pbar        = tqdm(trainloader)
+    for batch_idx, (inputs, targets) in enumerate(trainloader):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
 
@@ -147,7 +143,7 @@ def train(epoch):
             loss        = criterion(outputs, targets)
         train_loss  += loss.item()
         
-        _, predicted = torch.max(outputs.data, 1)
+        predicted   = torch.argmax(outputs.data, 1)
         total       += targets.size(0)
 
         if args.mixup:
@@ -160,14 +156,15 @@ def train(epoch):
         loss.backward()
         optimizer.step()
 
-        pbar.set_description('Loss: %.3f' % loss.item())
+        # pbar.set_description('Loss: %.3f' % loss.item())
     return train_loss / batch_idx, 100. * correct / total
 
 def test(epoch):
     global best_acc
     test_loss   = 0
-    correct     = 0
-    total       = 0
+    
+    y_true      = []
+    y_pred      = []
 
     pbar        = tqdm(testloader)
     net.eval()
@@ -182,19 +179,20 @@ def test(epoch):
 
             test_loss       += loss.item()
             
-            _, predicted    = torch.max(outputs.data, 1)
-            total           += targets.size(0)
-            correct         += predicted.eq(targets.data).cpu().sum().numpy()
+            y_pred          += list(torch.argmax(outputs.data, 1).cpu().numpy())
+            y_true          += list(targets.cpu().numpy())
     
-    acc = 100.* correct / total
+    acc = f1_score(y_true, y_pred, average='macro')
+    if epoch == args.epoch - 1:
+        print(confusion_matrix(y_true, y_pred))
+    
     if epoch == start_epoch + args.epoch - 1 or acc > best_acc:
         checkpoint(acc, epoch)
     
     if acc > best_acc:
         best_acc = acc
     
-    return (test_loss / batch_idx, 100.* correct / total)
-
+    return (test_loss / batch_idx, acc)
 
 def checkpoint(acc, epoch):
     # Save checkpoint.
@@ -208,7 +206,7 @@ def checkpoint(acc, epoch):
     if not os.path.isdir('checkpoint'):
         os.mkdir('checkpoint')
     
-    torch.save(state, './checkpoint/ckpt.t7' + args.name + '_' + str(args.seed) + '_' + str(int(args.mixup)))
+    torch.save(state, './checkpoint/ckpt.t7' + args.name + '_' + str(int(args.mixup)))
 
 def adjust_learning_rate(optimizer, epoch):
     """decrease the learning rate at 100 and 150 epoch"""
@@ -227,8 +225,14 @@ if not os.path.exists(logname):
 
 for epoch in range(start_epoch, args.epoch):
     train_loss, train_acc   = train(epoch)
-    test_loss, test_acc     = test(epoch)
+    if args.test_dir is not None:
+        test_loss, test_acc     = test(epoch)
+    else:
+        test_loss, test_acc     = 0.0, 0.0
+    print("Epoch %d, Train loss: %.3f, Test loss: %.3f, Test Acc: %.3f" % (epoch, train_loss, test_loss, test_acc))
+
     adjust_learning_rate(optimizer, epoch)
+    
     with open(logname, 'a', newline='') as logfile:
         logwriter = csv.writer(logfile, delimiter=',')
         logwriter.writerow([epoch, train_loss, train_acc, test_loss, test_acc])
