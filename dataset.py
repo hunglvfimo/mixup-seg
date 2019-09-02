@@ -28,13 +28,19 @@ class TiffFolder(Dataset):
         self._label_to_index = dict()
         self._index_to_label = dict()
 
-        for index, label in enumerate(os.listdir(data_dir)):
-            self._label_to_index[label]  = index
-            self._index_to_label[index]  = label
+        label_index = 0
+        for label in os.listdir(data_dir):
+            if len(label) > 1:
+                continue
+
+            self._label_to_index[label]         = label_index
+            self._index_to_label[label_index]   = label
             
             for image_path in glob.glob(os.path.join(data_dir, label, "*.tif")):
                 self._image_paths.append(image_path)
-                self._labels.append(index)
+                self._labels.append(label_index)
+
+            label_index += 1
 
     def label_to_index(self, label):
         return self._label_to_index[label]

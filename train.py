@@ -116,8 +116,9 @@ def mixup_data(x, y, alpha=1.0, use_cuda=True):
     else:
         index = torch.randperm(batch_size)
 
-    mixed_x = lam * x + (1 - lam) * x[index, :]
-    y_a, y_b = y, y[index]
+    mixed_x     = lam * x + (1 - lam) * x[index, :]
+    y_a, y_b    = y, y[index]
+    
     return mixed_x, y_a, y_b, lam
 
 def mixup_criterion(criterion, pred, y_a, y_b, lam):
