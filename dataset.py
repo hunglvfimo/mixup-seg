@@ -35,12 +35,12 @@ class TiffFolder(Dataset):
 
         label_index          = 0
         for label in lst_label:
-            if len(label) > 1:
+            if label in ["123", "4", "5"]:
                 continue
 
             self._label_to_index[label]         = label_index
             self._index_to_label[label_index]   = label
-                        
+
             for image_path in glob.glob(os.path.join(data_dir, label, "*.tif")):
                 self._image_paths.append(image_path)
                 self._labels.append(label_index)
