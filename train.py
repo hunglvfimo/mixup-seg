@@ -142,6 +142,7 @@ def train(epoch):
             loss        = mixup_criterion(criterion, outputs, targets_a, targets_b, lam)
         else:
             loss        = criterion(outputs, targets)
+        
         train_loss  += loss.item()
         
         predicted   = torch.argmax(outputs.data, 1)
