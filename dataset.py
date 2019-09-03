@@ -35,9 +35,6 @@ class TiffFolder(Dataset):
 
         label_index          = 0
         for label in lst_label:
-            if label in ["123", "4", "5"]:
-                continue
-
             self._label_to_index[label]         = label_index
             self._index_to_label[label_index]   = label
 
