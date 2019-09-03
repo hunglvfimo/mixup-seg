@@ -15,6 +15,8 @@ import torchvision.transforms.functional as TF
 
 from params import * 
 
+CLASS_MAPPING = {'12': 0, '123': 1, '13': 2, '2': 3, '23': 4, '24': 5, '3': 6, '4': 7, '5': 8}
+
 class TiffFolder(Dataset):
     def __init__(self, 
                 data_dir, 
@@ -27,22 +29,13 @@ class TiffFolder(Dataset):
 
         self._image_paths    = []
         self._labels         = []
-        self._label_to_index = dict()
+        self._label_to_index = CLASS_MAPPING
         self._index_to_label = dict()
 
-        lst_label            = os.listdir(data_dir)
-        lst_label            = np.sort(lst_label)
-
-        label_index          = 0
-        for label in lst_label:
-            self._label_to_index[label]         = label_index
-            self._index_to_label[label_index]   = label
-
+        for label in os.listdir(data_dir):
             for image_path in glob.glob(os.path.join(data_dir, label, "*.tif")):
                 self._image_paths.append(image_path)
-                self._labels.append(label_index)
-
-            label_index += 1
+                self._labels.append(self._label_to_index[label])
 
     def label_to_index(self, label):
         return self._label_to_index[label]
