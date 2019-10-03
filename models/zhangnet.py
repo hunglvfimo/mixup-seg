@@ -83,8 +83,11 @@ class ZhangNet(nn.Module):
 		out = self.dropout(out)
 		out = self.flatten(out)
 		out = self.classifier(out)
-		
+
 		return out
+
+def ZhangNet15(in_channels, n_classes):
+	return ZhangNet(in_channels, n_classes)
 
 if __name__ == '__main__':
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

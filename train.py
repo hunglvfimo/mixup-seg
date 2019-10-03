@@ -32,7 +32,7 @@ parser.add_argument('--test_dir',       default=None, type=str, help='')
 parser.add_argument('--mixup',          help='Use mixup (Default: False)', action='store_true')
 parser.add_argument('--lr',             default=1e-1, type=float, help='learning rate')
 parser.add_argument('--snapshot',       type=str, default=None)
-parser.add_argument('--model',          default="HungNet11", type=str, help='model type (default: HungNet11)')
+parser.add_argument('--model',          default="ZhangNet15", type=str, help='model type (default: ZhangNet15)')
 parser.add_argument('--name',           default='0', type=str, help='name of run')
 parser.add_argument('--seed',           default=0, type=int, help='random seed')
 parser.add_argument('--batch-size',     default=128, type=int, help='batch size')
@@ -80,7 +80,7 @@ if args.snapshot is not None:
     torch.set_rng_state(rng_state)
 else:
     print('==> Building model..')
-    net = models.__dict__[args.model](21, 9)
+    net = models.__dict__[args.model](21, 15)
 
 if not os.path.isdir('results'):
     os.mkdir('results')
