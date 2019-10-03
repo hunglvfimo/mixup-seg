@@ -65,7 +65,7 @@ trainloader = torch.utils.data.DataLoader(trainset,
                                           shuffle=True, num_workers=args.num_workers)
 
 if args.test_dir is not None:
-    testset     = TiffFolder(args.test_dir, transform=transform)
+    testset     = TiffFolder(args.test_dir, transform=transform, stage="test")
     print(testset._index_to_label)
     testloader  = torch.utils.data.DataLoader(testset, batch_size=args.batch_size,
                                              shuffle=False, num_workers=args.num_workers)
