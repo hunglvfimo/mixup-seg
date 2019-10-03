@@ -65,10 +65,10 @@ class ZhangNet(nn.Module):
 
 		layers 	+= [BasicConv2d(in_channels, 64, kernel_size=3, padding=1)]
 		layers 	+= [nn.MaxPool2d(kernel_size=3, stride=2)]
-		layers 	+= [nn.LocalResponseNorm(size=64)]
+		layers 	+= [nn.LocalResponseNorm(size=5)]
 		layers 	+= [BasicConv2d(64, 128, kernel_size=1)]
 		layers 	+= [BasicConv2d(128, 256, kernel_size=3, padding=1)]
-		layers 	+= [nn.LocalResponseNorm(size=256)]
+		layers 	+= [nn.LocalResponseNorm(size=5)]
 		layers 	+= [nn.MaxPool2d(kernel_size=3, stride=2)]
 		layers 	+= [InceptionA(256, pool_features=32)] # 224 + 32
 		layers 	+= [InceptionA(256, pool_features=64)] # 224 + 64
