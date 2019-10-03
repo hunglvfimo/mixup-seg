@@ -81,7 +81,7 @@ if args.snapshot is not None:
     torch.set_rng_state(rng_state)
 else:
     print('==> Building model..')
-    net = models.__dict__[args.model](21, 15, args.pool_type)
+    net = models.__dict__[args.model](21, 9, args.pool_type)
 
 if not os.path.isdir('results'):
     os.mkdir('results')
