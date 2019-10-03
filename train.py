@@ -181,7 +181,7 @@ def test(epoch):
             y_pred          += list(torch.argmax(outputs.data, 1).cpu().numpy())
             y_true          += list(targets.cpu().numpy())
     
-    acc = accuracy_score(y_true, y_pred, average='macro')
+    acc = accuracy_score(y_true, y_pred)
     if epoch == args.epoch - 1:
         print(confusion_matrix(y_true, y_pred))
     
