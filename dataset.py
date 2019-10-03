@@ -15,8 +15,6 @@ import torchvision.transforms.functional as TF
 
 from params import * 
 
-CLASS_MAPPING = {'12': 0, '123': 1, '13': 2, '2': 3, '23': 4, '24': 5, '3': 6, '4': 7, '5': 8}
-
 class TiffFolder(Dataset):
     def __init__(self, 
                 data_dir,
