@@ -52,29 +52,43 @@ class InceptionA(nn.Module):
 		return torch.cat(outputs, 1)
 
 class ZhangNet(nn.Module):
-	def __init__(self, in_channels, n_classes):
+	def __init__(self, in_channels, n_classes, pool_type="max"):
 		super(ZhangNet, self).__init__()
 
-		self.features 	= self._make_layers(in_channels)
+		self.features 	= self._make_layers(in_channels, pool_type)
 		self.dropout 	= nn.Dropout(0.4)
 		self.flatten 	= Flatten()
 		self.classifier = nn.Linear(480, n_classes)
 
-	def _make_layers(self, in_channels):
+	def _make_layers(self, in_channels, pool_type):
 		layers = []
 
 		layers 	+= [BasicConv2d(in_channels, 64, kernel_size=3, padding=1)]
-		layers 	+= [nn.MaxPool2d(kernel_size=3, stride=2)]
+		
+		if pool_type == "max":
+			layers 	+= [nn.MaxPool2d(kernel_size=3, stride=2)]
+		elif pool_type == "avg":
+			layers 	+= [nn.AvgPool2d(kernel_size=3, stride=2)]
+
 		layers 	+= [nn.LocalResponseNorm(size=5)]
 		layers 	+= [BasicConv2d(64, 128, kernel_size=1)]
 		layers 	+= [BasicConv2d(128, 256, kernel_size=3, padding=1)]
 		layers 	+= [nn.LocalResponseNorm(size=5)]
-		layers 	+= [nn.MaxPool2d(kernel_size=3, stride=2)]
+		
+		if pool_type == "max":
+			layers 	+= [nn.MaxPool2d(kernel_size=3, stride=2)]
+		elif pool_type == "avg":
+			layers 	+= [nn.AvgPool2d(kernel_size=3, stride=2)]
+		
 		layers 	+= [InceptionA(256, pool_features=32)] # 224 + 32
 		layers 	+= [InceptionA(256, pool_features=64)] # 224 + 64
 		layers 	+= [InceptionA(288, pool_features=128)] # 224 + 128
 		layers 	+= [InceptionA(352, pool_features=256)] # 224 + 256
-		layers 	+= [nn.MaxPool2d(kernel_size=3)]
+		
+		if pool_type == "max":
+			layers 	+= [nn.MaxPool2d(kernel_size=3)]
+		elif pool_type == "avg":
+			layers 	+= [nn.AvgPool2d(kernel_size=3)]
 
 		return nn.Sequential(*layers)
 
@@ -86,8 +100,8 @@ class ZhangNet(nn.Module):
 
 		return out
 
-def ZhangNet15(in_channels, n_classes):
-	return ZhangNet(in_channels, n_classes)
+def ZhangNet15(in_channels, n_classes, pool_type="max"):
+	return ZhangNet(in_channels, n_classes, pool_type)
 
 if __name__ == '__main__':
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
