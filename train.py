@@ -24,7 +24,7 @@ from params import *
 
 from tqdm import tqdm
 from osgeo import gdal
-from sklearn.metrics import f1_score, confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix
 
 parser = argparse.ArgumentParser(description='PyTorch Mixup')
 parser.add_argument('--train_dir',      default=None, type=str, help='')
@@ -181,7 +181,7 @@ def test(epoch):
             y_pred          += list(torch.argmax(outputs.data, 1).cpu().numpy())
             y_true          += list(targets.cpu().numpy())
     
-    acc = f1_score(y_true, y_pred, average='macro')
+    acc = accuracy_score(y_true, y_pred, average='macro')
     if epoch == args.epoch - 1:
         print(confusion_matrix(y_true, y_pred))
     
