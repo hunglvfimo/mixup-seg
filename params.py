@@ -13,6 +13,6 @@ DATASET_STD     = (1.3421e+03, 7.8659e+03, 6.6906e-03, 7.5304e-03, 8.7460e-03, 1
 
 CLASS_MAPPING = {'12': 0, '123': 1, '13': 2, '2': 3, '23': 4, '24': 5, '3': 6, '4': 7, '5': 8}
 
-CLASS_WEIGHTS = [6, 1, 30, 30, 10, 73, 23, 2, 1]
+CLASS_WEIGHTS = [6., 1., 30., 30., 10., 73., 23., 2., 1.]
 CLASS_WEIGHTS /= np.sum(CLASS_WEIGHTS)
 CLASS_WEIGHTS = 1 - CLASS_WEIGHTS
