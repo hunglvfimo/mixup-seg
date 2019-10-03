@@ -2,7 +2,6 @@ import os
 import glob
 
 import numpy as np
-import random
 
 from PIL import Image
 import tifffile as tiff
@@ -19,12 +18,15 @@ class TiffFolder(Dataset):
     def __init__(self, 
                 data_dir,
                 class_mapping=CLASS_MAPPING,
-                transform=None):
+                transform=None, 
+                stage="train"):
         super(TiffFolder, self).__init__()
         
         self._transform      = transform
         if self._transform is None:
             self._transform = transforms.Compose([transforms.ToTensor(),])
+
+        self.stage           = stage
 
         self._image_paths    = []
         self._labels         = []
@@ -48,6 +50,14 @@ class TiffFolder(Dataset):
         h, w, c = image.shape
         for i in range(c):
             image[..., i][image[..., i] == NODATA_VALUE] = DATASET_MEAN[i]
+
+        if self.stage == "train":
+            if np.random.rand() >= 0.5:
+                # flip horizontal
+                image = image[::-1, ...]
+            if np.random.rand() >= 0.5:
+                # flip vertical
+                image = image[:, ::-1, :]
         
         return self._transform(image), self._labels[index]
 
