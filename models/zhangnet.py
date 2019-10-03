@@ -41,9 +41,9 @@ class InceptionA(nn.Module):
 		branch5x5 = self.branch5x5_1(x)
 		branch5x5 = self.branch5x5_2(branch5x5)
 
-		branch3x3dbl = self.branch3x3dbl_1(x)
-		branch3x3dbl = self.branch3x3dbl_2(branch3x3dbl)
-		branch3x3dbl = self.branch3x3dbl_3(branch3x3dbl)
+		branch3x3dbl = self.branch3x3_1(x)
+		branch3x3dbl = self.branch3x3_2(branch3x3dbl)
+		branch3x3dbl = self.branch3x3_3(branch3x3dbl)
 
 		branch_pool = F.avg_pool2d(x, kernel_size=3, stride=1, padding=1)
 		branch_pool = self.branch_pool(branch_pool)
