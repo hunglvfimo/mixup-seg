@@ -15,12 +15,13 @@ import torchvision.transforms.functional as TF
 
 from params import * 
 
-# CLASS_MAPPING = {'12': 0, '123': 1, '13': 2, '2': 3, '23': 4, '24': 5, '3': 6, '4': 7, '5': 8}
-CLASS_MAPPING = {'12': 0, '123': 0, '13': 0, '2': 1, '23': 2, '24': 3, '3': 4, '4': 5, '5': 6}
+CLASS_MAPPING = {'12': 0, '123': 1, '13': 2, '2': 3, '23': 4, '24': 5, '3': 6, '4': 7, '5': 8}
+# CLASS_MAPPING = {'12': 0, '123': 0, '13': 0, '2': 1, '23': 2, '24': 3, '3': 4, '4': 5, '5': 6}
 
 class TiffFolder(Dataset):
     def __init__(self, 
-                data_dir, 
+                data_dir,
+                class_mapping=CLASS_MAPPING,
                 transform=None):
         super(TiffFolder, self).__init__()
         
@@ -30,7 +31,7 @@ class TiffFolder(Dataset):
 
         self._image_paths    = []
         self._labels         = []
-        self._label_to_index = CLASS_MAPPING
+        self._label_to_index = class_mapping
         self._index_to_label = dict()
 
         for label in os.listdir(data_dir):

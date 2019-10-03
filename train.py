@@ -40,7 +40,6 @@ parser.add_argument('--epoch',          default=1000, type=int, help='total epoc
 parser.add_argument('--decay',          default=1e-4, type=float, help='weight decay')
 parser.add_argument('--alpha',          default=1., type=float, help='mixup interpolation coefficient (default: 1)')
 parser.add_argument('--num_workers',    default=0, type=int, help='')
-
 args        = parser.parse_args()
 
 use_cuda    = torch.cuda.is_available()
@@ -53,7 +52,6 @@ if args.seed != 0:
 
 # Data
 print('==> Preparing data..')
-
 transform       = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize(DATASET_MEAN,
@@ -62,7 +60,6 @@ transform       = transforms.Compose([
 
 trainset    = TiffFolder(args.train_dir, transform=transform)
 print(trainset._index_to_label)
-
 trainloader = torch.utils.data.DataLoader(trainset,
                                           batch_size=args.batch_size,
                                           shuffle=True, num_workers=args.num_workers)
