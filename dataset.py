@@ -54,10 +54,10 @@ class TiffFolder(Dataset):
         if self.stage == "train":
             if np.random.rand() >= 0.5:
                 # flip horizontal
-                image = image[::-1, ...]
+                image = image[::-1, ...].copy()
             if np.random.rand() >= 0.5:
                 # flip vertical
-                image = image[:, ::-1, :]
+                image = image[:, ::-1, :].copy()
         
         return self._transform(image), self._labels[index]
 
