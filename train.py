@@ -94,7 +94,9 @@ if use_cuda:
 if args.mixup:
     print('Using mixup')
 
-criterion = nn.CrossEntropyLoss(weight=torch.FloatTensor(CLASS_WEIGHTS).cuda())
+CLASS_WEIGHTS = torch.FloatTensor(CLASS_WEIGHTS).cuda()
+
+criterion = nn.CrossEntropyLoss(weight=CLASS_WEIGHTS)
 optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.decay)
 
 def mixup_data(x, y, alpha=1.0, use_cuda=True):
