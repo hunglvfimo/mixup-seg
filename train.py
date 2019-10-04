@@ -30,6 +30,7 @@ parser = argparse.ArgumentParser(description='PyTorch Mixup')
 parser.add_argument('--train_dir',      default=None, type=str, help='')
 parser.add_argument('--test_dir',       default=None, type=str, help='')
 parser.add_argument('--mixup',          help='Use mixup (Default: False)', action='store_true')
+parser.add_argument('--balance',        help='Use weights for imbalanced class', action='store_true')
 parser.add_argument('--lr',             default=1e-1, type=float, help='learning rate')
 parser.add_argument('--snapshot',       type=str, default=None)
 parser.add_argument('--model',          default="ZhangNet15", type=str, help='model type (default: ZhangNet15)')
@@ -94,9 +95,12 @@ if use_cuda:
 if args.mixup:
     print('Using mixup')
 
-CLASS_WEIGHTS = torch.FloatTensor(CLASS_WEIGHTS).cuda()
+if args.balance:
+    CLASS_WEIGHTS = torch.FloatTensor(CLASS_WEIGHTS).cuda()
+    criterion = nn.CrossEntropyLoss(weight=CLASS_WEIGHTS)
+else:
+    criterion = nn.CrossEntropyLoss()
 
-criterion = nn.CrossEntropyLoss(weight=CLASS_WEIGHTS)
 optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.decay)
 
 def mixup_data(x, y, alpha=1.0, use_cuda=True):
