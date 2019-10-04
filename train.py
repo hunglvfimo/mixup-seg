@@ -26,11 +26,12 @@ from tqdm import tqdm
 from osgeo import gdal
 from sklearn.metrics import accuracy_score, confusion_matrix
 
+use_cuda    = torch.cuda.is_available()
+
 parser = argparse.ArgumentParser(description='PyTorch Mixup')
 parser.add_argument('--train_dir',      default=None, type=str, help='')
 parser.add_argument('--test_dir',       default=None, type=str, help='')
 parser.add_argument('--mixup',          help='Use mixup (Default: False)', action='store_true')
-parser.add_argument('--balance',        help='Use weights for imbalanced class', action='store_true')
 parser.add_argument('--lr',             default=1e-1, type=float, help='learning rate')
 parser.add_argument('--snapshot',       type=str, default=None)
 parser.add_argument('--model',          default="ZhangNet15", type=str, help='model type (default: ZhangNet15)')
@@ -44,15 +45,13 @@ parser.add_argument('--alpha',          default=1., type=float, help='mixup inte
 parser.add_argument('--num_workers',    default=0, type=int, help='')
 args        = parser.parse_args()
 
-use_cuda    = torch.cuda.is_available()
+if args.seed != 0:
+    torch.manual_seed(args.seed)
 
 best_acc    = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
-if args.seed != 0:
-    torch.manual_seed(args.seed)
-
-# Data
+# Preparing data 
 print('==> Preparing data..')
 transform       = transforms.Compose([
     transforms.ToTensor(),
@@ -60,69 +59,42 @@ transform       = transforms.Compose([
                          DATASET_STD),
 ])
 
-trainset    = TiffFolder(args.train_dir, transform=transform)
-print(trainset._index_to_label)
+trainset    = TiffFolder(args.train_dir, transform=transform, mixup=args.mixup)
+print(trainset.index_to_label())
 trainloader = torch.utils.data.DataLoader(trainset,
                                           batch_size=args.batch_size,
                                           shuffle=True, num_workers=args.num_workers)
+n_classes = trainset.num_classes()
 
 if args.test_dir is not None:
-    testset     = TiffFolder(args.test_dir, transform=transform, stage="test")
-    print(testset._index_to_label)
+    testset     = TiffFolder(args.test_dir, transform=transform, 
+                        mixup=False, stage="test")
+    print(testset.index_to_label())
     testloader  = torch.utils.data.DataLoader(testset, batch_size=args.batch_size,
-                                             shuffle=False, num_workers=args.num_workers)
+                                            shuffle=False, num_workers=args.num_workers)
 
-# Model
+# Creating model
 if args.snapshot is not None:
-    checkpoint = torch.load('./checkpoint/ckpt.t7' + args.name + '_' + str(int(args.mixup)))
-    net = checkpoint['net']
-    best_acc = checkpoint['acc']
+    checkpoint  = torch.load(args.snapshot)
+    net         = checkpoint['net']
+    best_acc    = checkpoint['acc']
     start_epoch = checkpoint['epoch'] + 1
-    rng_state = checkpoint['rng_state']
+    rng_state   = checkpoint['rng_state']
     torch.set_rng_state(rng_state)
 else:
     print('==> Building model..')
-    net = models.__dict__[args.model](21, 9, args.pool_type)
+    net = models.__dict__[args.model](21, n_classes, args.pool_type)
 
 if not os.path.isdir('results'):
     os.mkdir('results')
-logname = ('results/log_' + net.__class__.__name__ + '_' + str(args.name) + '_' + str(int(args.mixup)) + '.csv')
+logname = ('results/log_' + net.__class__.__name__ + '_' + str(args.name) + '.csv')
 
 if use_cuda:
-    net.cuda()
     print('Using CUDA..')
+    net.cuda()
 
-if args.mixup:
-    print('Using mixup')
-
-if args.balance:
-    CLASS_WEIGHTS = torch.FloatTensor(CLASS_WEIGHTS).cuda()
-    criterion = nn.CrossEntropyLoss(weight=CLASS_WEIGHTS)
-else:
-    criterion = nn.CrossEntropyLoss()
-
+criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.decay)
-
-def mixup_data(x, y, alpha=1.0, use_cuda=True):
-    '''Returns mixed inputs, pairs of targets, and lambda'''
-    if alpha > 0:
-        lam = np.random.beta(alpha, alpha)
-    else:
-        lam = 1
-
-    batch_size = x.size()[0]
-    if use_cuda:
-        index = torch.randperm(batch_size).cuda()
-    else:
-        index = torch.randperm(batch_size)
-
-    mixed_x     = lam * x + (1 - lam) * x[index, :]
-    y_a, y_b    = y, y[index]
-
-    return mixed_x, y_a, y_b, lam
-
-def mixup_criterion(criterion, pred, y_a, y_b, lam):
-    return lam * criterion(pred, y_a) + (1 - lam) * criterion(pred, y_b)
 
 def train(epoch):
     print('\nEpoch: %d' % epoch)
@@ -132,32 +104,24 @@ def train(epoch):
     total       = 0
 
     # pbar        = tqdm(trainloader)
-    for batch_idx, (inputs, targets) in enumerate(trainloader):
+    for batch_idx, (inputs, targets, weights) in enumerate(trainloader):
         if use_cuda:
-            inputs, targets = inputs.cuda(), targets.cuda()
+            inputs  = inputs.cuda()
+            targets = targets.cuda()
+            weights = weights.cuda()
 
-        if args.mixup:
-            inputs, targets_a, targets_b, lam   = mixup_data(inputs, targets, args.alpha, use_cuda)
-            inputs, targets_a, targets_b        = map(Variable, (inputs, targets_a, targets_b))
+        inputs, targets, weights = map(Variable, (inputs, targets, weights))
         
         outputs     = net(inputs)
-        
-        if args.mixup:
-            loss        = mixup_criterion(criterion, outputs, targets_a, targets_b, lam)
-        else:
-            loss        = criterion(outputs, targets)
+        loss        = criterion(outputs, targets) * weights
         
         train_loss  += loss.item()
         
         predicted   = torch.argmax(outputs.data, 1)
         total       += targets.size(0)
 
-        if args.mixup:
-            correct     += (lam * predicted.eq(targets_a.data).cpu().sum().numpy()
-                                + (1 - lam) * predicted.eq(targets_b.data).cpu().sum().numpy())
-        else:
-            correct     += predicted.eq(targets.data).cpu().sum().numpy()
-
+        correct     += weights * predicted.eq(targets_a.data).cpu().sum().numpy()
+        
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -175,17 +139,29 @@ def test(epoch):
     pbar        = tqdm(testloader)
     net.eval()
     with torch.no_grad():
-        for batch_idx, (inputs, targets) in enumerate(pbar):
+        for batch_idx, (inputs, targets, _) in enumerate(pbar):
             if use_cuda:
                 inputs, targets = inputs.cuda(), targets.cuda()
             
             inputs, targets = Variable(inputs), Variable(targets)
-            outputs         = net(inputs)
-            loss            = criterion(outputs, targets)
-
-            test_loss       += loss.item()
             
-            y_pred          += list(torch.argmax(outputs.data, 1).cpu().numpy())
+            outputs         = net(inputs)
+
+            outputs         = outputs.data.cpu().numpy()
+            y_pred          = []
+            for row in outputs:
+                # from class index to class label
+                pred        = np.argwhere(row >= 0.5)[:, 0]
+                pred        = [trainset.index_to_label(p) for p in pred]
+                pred.sort()
+                # convert back to label index in testset
+                pred        = ''.join(str(e) for e in pred)
+                pred        = testset.label_to_index(pred)
+                y_pred.append(pred)
+
+            # loss            = criterion(outputs, targets)
+            # test_loss       += loss.item()
+            
             y_true          += list(targets.cpu().numpy())
     
     acc = accuracy_score(y_true, y_pred)
@@ -231,14 +207,16 @@ if not os.path.exists(logname):
 
 for epoch in range(start_epoch, args.epoch):
     train_loss, train_acc   = train(epoch)
+    
     if args.test_dir is not None:
         test_loss, test_acc     = test(epoch)
     else:
         test_loss, test_acc     = 0.0, 0.0
-    print("Epoch %d, Train loss: %.3f, Test loss: %.3f, Test Acc: %.3f" % (epoch, train_loss, test_loss, test_acc))
+    
+    print("Epoch %d, Train loss: %.3f, Train acc: %.3f, Test loss: %.3f, Test Acc: %.3f" % (epoch, train_loss, train_acc test_loss, test_acc))
 
     adjust_learning_rate(optimizer, epoch)
-    
+
     with open(logname, 'a', newline='') as logfile:
         logwriter = csv.writer(logfile, delimiter=',')
         logwriter.writerow([epoch, train_loss, train_acc, test_loss, test_acc])

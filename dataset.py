@@ -17,8 +17,8 @@ from params import *
 class TiffFolder(Dataset):
     def __init__(self, 
                 data_dir,
-                class_mapping=CLASS_MAPPING,
-                transform=None, 
+                transform=None,
+                mixup=False,
                 stage="train"):
         super(TiffFolder, self).__init__()
         
@@ -30,19 +30,48 @@ class TiffFolder(Dataset):
 
         self._image_paths    = []
         self._labels         = []
-        self._label_to_index = class_mapping
+        self._weights        = []
+
+        self._label_to_index = dict()
         self._index_to_label = dict()
 
-        for label in os.listdir(data_dir):
-            for image_path in glob.glob(os.path.join(data_dir, label, "*.tif")):
-                self._image_paths.append(image_path)
-                self._labels.append(self._label_to_index[label])
+        for label_name in os.listdir(data_dir):
+            if mixup:
+                # split mixed label to list of single labels
+                label = [c for c in label_name]
+                # add single label to label dict
+                for c in label:
+                    if c not in self._label_to_index.keys():
+                        self._label_to_index[c] = len(self._label_to_index.keys())
+                        self._index_to_label[len(self._label_to_index.keys())] = c
+                # 
+                for image_path in glob.glob(os.path.join(data_dir, label_name, "*.tif")):
+                    for c in label:
+                        self._image_paths.append(image_path)
+                        self._labels.append((self._label_to_index[c] for c in label))
+                        self._weights.append(1.0 / len(label))
+            else:
+                if label_name not in self._label_to_index.keys():
+                    self._label_to_index[label_name] = len(self._label_to_index.keys())
+                    self._index_to_label[len(self._label_to_index.keys())] = label_name
+
+                for image_path in glob.glob(os.path.join(data_dir, label_name, "*.tif")):
+                    self._image_paths.append(image_path)
+                    self._labels.append(self._label_to_index[label_name])
+                    self._weights.append(1.0)
+
+    def num_classes(self):
+        return len(self._label_to_index)
 
     def label_to_index(self, label):
-        return self._label_to_index[label]
+        if label in self._label_to_index.keys():
+            return self._label_to_index[label]
+        return -1
 
     def index_to_label(self, class_index):
-        return self._index_to_label[class_index]
+        if class_index in self._index_to_label.keys():
+            return self._index_to_label[class_index]
+        return -1
 
     def __getitem__(self, index):
         image = tiff.imread(self._image_paths[index])
@@ -59,7 +88,7 @@ class TiffFolder(Dataset):
                 # flip vertical
                 image = image[:, ::-1, :].copy()
         
-        return self._transform(image), self._labels[index]
+        return self._transform(image), self._labels[index], self._weights[index]
 
     def __len__(self):
         return len(self._image_paths)
