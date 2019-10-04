@@ -149,7 +149,6 @@ def test(epoch):
             outputs         = net(inputs)
 
             outputs         = outputs.data.cpu().numpy()
-            y_pred          = []
             for row in outputs:
                 # from class index to class label
                 pred        = np.argwhere(row >= 0.5)[:, 0]
