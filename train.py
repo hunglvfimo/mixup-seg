@@ -60,7 +60,7 @@ transform       = transforms.Compose([
 ])
 
 trainset    = TiffFolder(args.train_dir, transform=transform, mixup=args.mixup)
-print(trainset.index_to_label())
+print(trainset._index_to_label)
 trainloader = torch.utils.data.DataLoader(trainset,
                                           batch_size=args.batch_size,
                                           shuffle=True, num_workers=args.num_workers)
@@ -69,7 +69,7 @@ n_classes = trainset.num_classes()
 if args.test_dir is not None:
     testset     = TiffFolder(args.test_dir, transform=transform, 
                         mixup=False, stage="test")
-    print(testset.index_to_label())
+    print(testset._index_to_label)
     testloader  = torch.utils.data.DataLoader(testset, batch_size=args.batch_size,
                                             shuffle=False, num_workers=args.num_workers)
 
