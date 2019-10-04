@@ -48,7 +48,7 @@ class TiffFolder(Dataset):
                 for image_path in glob.glob(os.path.join(data_dir, label_name, "*.tif")):
                     for c in label:
                         self._image_paths.append(image_path)
-                        self._labels.append((self._label_to_index[c] for c in label))
+                        self._labels.append(self._label_to_index[c])
                         self._weights.append(1.0 / len(label))
             else:
                 if label_name not in self._label_to_index.keys():
