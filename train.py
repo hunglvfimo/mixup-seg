@@ -93,7 +93,7 @@ if use_cuda:
     print('Using CUDA..')
     net.cuda()
 
-criterion = nn.CrossEntropyLoss()
+criterion = nn.CrossEntropyLoss(reduction='none')
 optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=args.decay)
 
 def train(epoch):
@@ -114,6 +114,7 @@ def train(epoch):
         
         outputs     = net(inputs)
         loss        = criterion(outputs, targets) * weights
+        loss        = torch.mean(loss)
         
         train_loss  += loss.item()
         
