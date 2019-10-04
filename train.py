@@ -151,11 +151,15 @@ def test(epoch):
             outputs         = outputs.data.cpu().numpy()
             for row in outputs:
                 # from class index to class label
-                pred        = np.argwhere(row >= 0.5)[:, 0]
-                pred        = [trainset.index_to_label(p) for p in pred]
-                pred.sort()
+                pred        = np.argwhere(np.asarray(row) >= 0.5)[:, 0]
+                if len(pred) > 0:
+                    pred        = [trainset.index_to_label(p) for p in pred]
+                    pred.sort()
+                    pred        = ''.join(str(e) for e in pred)
+                else:
+                    pred        = "-1"
+
                 # convert back to label index in testset
-                pred        = ''.join(str(e) for e in pred)
                 pred        = testset.label_to_index(pred)
                 y_pred.append(pred)
 
