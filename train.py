@@ -213,7 +213,7 @@ for epoch in range(start_epoch, args.epoch):
     else:
         test_loss, test_acc     = 0.0, 0.0
     
-    print("Epoch %d, Train loss: %.3f, Train acc: %.3f, Test loss: %.3f, Test Acc: %.3f" % (epoch, train_loss, train_acc test_loss, test_acc))
+    print("Epoch %d, Train loss: %.3f, Train acc: %.3f, Test loss: %.3f, Test Acc: %.3f" % (epoch, train_loss, train_acc, test_loss, test_acc))
 
     adjust_learning_rate(optimizer, epoch)
 
