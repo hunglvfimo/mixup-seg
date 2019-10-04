@@ -121,7 +121,7 @@ def train(epoch):
         predicted   = torch.argmax(outputs.data, 1)
         total       += targets.size(0)
 
-        correct     += weights * predicted.eq(targets.data).cpu().sum().numpy()
+        correct     += predicted.eq(targets.data).cpu().sum().numpy()
         
         optimizer.zero_grad()
         loss.backward()
