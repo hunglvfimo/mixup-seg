@@ -157,7 +157,7 @@ def test(epoch):
             outputs         = net(inputs)
 
             if args.mixup:
-                outputs         = F.log_softmax(outputs)
+                outputs         = F.softmax(outputs)
                 outputs         = outputs.data.cpu().numpy()
                 if batch_idx == 0:
                     print(outputs)
