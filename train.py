@@ -135,7 +135,7 @@ def train(epoch):
         optimizer.step()
 
         # pbar.set_description('Loss: %.3f' % loss.item())
-    return train_loss / batch_idx, 100. * correct / total
+    return train_loss / batch_idx, 100. * correct / (total + 0.00001)
 
 def test(epoch):
     global best_acc
