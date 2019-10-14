@@ -26,6 +26,8 @@ from tqdm import tqdm
 from osgeo import gdal
 from sklearn.metrics import accuracy_score, confusion_matrix
 
+from torchsummary import summary
+
 use_cuda    = torch.cuda.is_available()
 
 parser = argparse.ArgumentParser(description='PyTorch Mixup')
@@ -84,6 +86,8 @@ if args.snapshot is not None:
 else:
     print('==> Building model..')
     net = models.__dict__[args.model](21, n_classes, args.pool_type)
+
+summary(net, (21, 15, 15))
 
 if not os.path.isdir('results'):
     os.mkdir('results')
