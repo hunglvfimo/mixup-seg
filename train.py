@@ -157,7 +157,8 @@ def test(epoch):
 
             if args.mixup:
                 outputs         = outputs.data.cpu().numpy()
-                print(outputs)
+                if batch_idx == 0:
+                    print(outputs)
                 for row in outputs:
                     # from class index to class label
                     pred        = np.argwhere(np.asarray(row) >= 0.5)[:, 0]
@@ -168,10 +169,8 @@ def test(epoch):
                     else:
                         pred        = "12345"
 
-                    print(pred)
                     # convert back to label index in testset
                     pred        = testset.label_to_index(pred)
-                    print(pred)
 
                     y_pred.append(pred)
 
@@ -183,8 +182,11 @@ def test(epoch):
 
                 y_pred          += list(torch.argmax(outputs.data, 1).cpu().numpy())
             
-            print(targets.cpu().numpy())
             y_true          += list(targets.cpu().numpy())
+
+            if batch_idx == 0:
+                print(y_pred)
+                print(y_true)
     
     acc = accuracy_score(y_true, y_pred)
     if epoch == args.epoch - 1:
