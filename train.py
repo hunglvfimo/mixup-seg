@@ -17,6 +17,7 @@ import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
+import torch.nn.functional as F
 
 import models
 from dataset import TiffFolder, TiffImageSet
