@@ -157,6 +157,7 @@ def test(epoch):
 
             if args.mixup:
                 outputs         = outputs.data.cpu().numpy()
+                print(outputs)
                 for row in outputs:
                     # from class index to class label
                     pred        = np.argwhere(np.asarray(row) >= 0.5)[:, 0]
@@ -167,8 +168,11 @@ def test(epoch):
                     else:
                         pred        = "12345"
 
+                    print(pred)
                     # convert back to label index in testset
                     pred        = testset.label_to_index(pred)
+                    print(pred)
+                    
                     y_pred.append(pred)
 
                 test_loss       += 0
