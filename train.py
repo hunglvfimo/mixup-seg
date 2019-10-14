@@ -172,7 +172,7 @@ def test(epoch):
                     # convert back to label index in testset
                     pred        = testset.label_to_index(pred)
                     print(pred)
-                    
+
                     y_pred.append(pred)
 
                 test_loss       += 0
@@ -183,6 +183,7 @@ def test(epoch):
 
                 y_pred          += list(torch.argmax(outputs.data, 1).cpu().numpy())
             
+            print(targets.cpu().numpy())
             y_true          += list(targets.cpu().numpy())
     
     acc = accuracy_score(y_true, y_pred)
