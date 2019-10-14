@@ -118,10 +118,12 @@ def train(epoch):
         
         train_loss  += loss.item()
         
-        predicted   = torch.argmax(outputs.data, 1)
-        total       += targets.size(0)
-
-        correct     += predicted.eq(targets.data).cpu().sum().numpy()
+        if args.mixup:
+            correct += 0
+        else:
+            predicted   = torch.argmax(outputs.data, 1)
+            total       += targets.size(0)
+            correct     += predicted.eq(targets.data).cpu().sum().numpy()
         
         optimizer.zero_grad()
         loss.backward()
@@ -148,23 +150,27 @@ def test(epoch):
             
             outputs         = net(inputs)
 
-            outputs         = outputs.data.cpu().numpy()
-            for row in outputs:
-                # from class index to class label
-                pred        = np.argwhere(np.asarray(row) >= 0.5)[:, 0]
-                if len(pred) > 0:
-                    pred        = [trainset.index_to_label(p) for p in pred]
-                    pred.sort()
-                    pred        = ''.join(str(e) for e in pred)
-                else:
-                    pred        = "12345"
+            if args.mixup:
+                outputs         = outputs.data.cpu().numpy()
+                for row in outputs:
+                    # from class index to class label
+                    pred        = np.argwhere(np.asarray(row) >= 0.5)[:, 0]
+                    if len(pred) > 0:
+                        pred        = [trainset.index_to_label(p) for p in pred]
+                        pred.sort()
+                        pred        = ''.join(str(e) for e in pred)
+                    else:
+                        pred        = "12345"
 
-                # convert back to label index in testset
-                pred        = testset.label_to_index(pred)
-                y_pred.append(pred)
+                    # convert back to label index in testset
+                    pred        = testset.label_to_index(pred)
+                    y_pred.append(pred)
 
-            # loss            = criterion(outputs, targets)
-            # test_loss       += loss.item()
+                test_loss       += 0
+            else:
+                y_pred          = torch.argmax(outputs.data, 1).cpu().numpy()
+                loss            = criterion(outputs, targets)
+                test_loss       += loss.item()
             
             y_true          += list(targets.cpu().numpy())
     
