@@ -174,6 +174,7 @@ def test(epoch):
             else:
                 y_pred          = torch.argmax(outputs.data, 1).cpu().numpy()
                 loss            = criterion(outputs, targets)
+                loss            = torch.mean(loss)
                 test_loss       += loss.item()
             
             y_true          += list(targets.cpu().numpy())
