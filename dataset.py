@@ -66,12 +66,11 @@ class TiffFolder(Dataset):
     def label_to_index(self, label):
         if label in self._label_to_index.keys():
             return self._label_to_index[label]
-        return -1
+        
+        return len(self._label_to_index)
 
     def index_to_label(self, class_index):
-        if class_index in self._index_to_label.keys():
-            return self._index_to_label[class_index]
-        return -1
+        return self._index_to_label[class_index]
 
     def __getitem__(self, index):
         image = tiff.imread(self._image_paths[index])

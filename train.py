@@ -157,7 +157,7 @@ def test(epoch):
                     pred.sort()
                     pred        = ''.join(str(e) for e in pred)
                 else:
-                    pred        = "-1"
+                    pred        = "12345"
 
                 # convert back to label index in testset
                 pred        = testset.label_to_index(pred)
