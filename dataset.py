@@ -42,8 +42,8 @@ class TiffFolder(Dataset):
                 # add single label to label dict
                 for c in label:
                     if c not in self._label_to_index.keys():
-                        self._label_to_index[c] = len(self._label_to_index.keys())
                         self._index_to_label[len(self._label_to_index.keys())] = c
+                        self._label_to_index[c] = len(self._label_to_index.keys())
                 # 
                 for image_path in glob.glob(os.path.join(data_dir, label_name, "*.tif")):
                     for c in label:
@@ -52,8 +52,9 @@ class TiffFolder(Dataset):
                         self._weights.append(np.float64(1.0 / len(label)))
             else:
                 if label_name not in self._label_to_index.keys():
-                    self._label_to_index[label_name] = len(self._label_to_index.keys())
                     self._index_to_label[len(self._label_to_index.keys())] = label_name
+                    self._label_to_index[label_name] = len(self._label_to_index.keys())
+                    
 
                 for image_path in glob.glob(os.path.join(data_dir, label_name, "*.tif")):
                     self._image_paths.append(image_path)
