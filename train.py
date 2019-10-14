@@ -67,6 +67,7 @@ trainloader = torch.utils.data.DataLoader(trainset,
                                           batch_size=args.batch_size,
                                           shuffle=True, num_workers=args.num_workers)
 n_classes = trainset.num_classes()
+print("Num of classes:", n_classes)
 
 if args.test_dir is not None:
     testset     = TiffFolder(args.test_dir, transform=transform, 
@@ -87,7 +88,7 @@ else:
     print('==> Building model..')
     net = models.__dict__[args.model](21, n_classes, args.pool_type)
 
-summary(net, (21, 15, 15))
+# summary(net, (21, 15, 15))
 
 if not os.path.isdir('results'):
     os.mkdir('results')
