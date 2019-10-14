@@ -141,6 +141,8 @@ def test(epoch):
     global best_acc
     test_loss   = 0
     
+    y_true      = []
+    y_pred      = []
 
     pbar        = tqdm(testloader)
     net.eval()
@@ -155,7 +157,6 @@ def test(epoch):
 
             if args.mixup:
                 outputs         = outputs.data.cpu().numpy()
-                y_pred      = []
                 for row in outputs:
                     # from class index to class label
                     pred        = np.argwhere(np.asarray(row) >= 0.5)[:, 0]
@@ -176,8 +177,7 @@ def test(epoch):
                 loss            = torch.mean(loss)
                 test_loss       += loss.item()
 
-                y_pred          = torch.argmax(outputs.data, 1).cpu().numpy()
-                print(y_pred.shape)
+                y_pred          += list(torch.argmax(outputs.data, 1).cpu().numpy())
             
             y_true          += list(targets.cpu().numpy())
     
